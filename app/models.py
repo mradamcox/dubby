@@ -1,9 +1,9 @@
+from __future__ import annotations
 import os
 import json
 import shutil
 from datetime import date
 from pathlib import Path
-from typing_extensions import Self
 import subprocess
 
 from .utils import GlobalConfigs, confirm_continue
@@ -31,7 +31,7 @@ class Project():
         if self.arches and "arches" not in self.tags:
             self.tags.append('arches')
 
-    def load_from_kwargs(self, **kwargs) -> Self:
+    def load_from_kwargs(self, **kwargs) -> Project:
 
         self.name = kwargs.get('name', "")
         self.path = Path(kwargs.get('path', ""))
@@ -52,7 +52,7 @@ class Project():
 
         return self
 
-    def load_from_manifest(self, manifest_path) -> Self:
+    def load_from_manifest(self, manifest_path) -> Project:
 
         with open(manifest_path, "r") as o:
             data = json.load(o)
