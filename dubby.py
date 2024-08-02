@@ -4,7 +4,7 @@ import json
 import argparse
 
 from app.models import Registry
-from app.utils import GlobalConfigs, confirm_continue
+from app.utils import GlobalConfigs, confirm_continue, print_table
 
 conf = GlobalConfigs()
 
@@ -24,6 +24,7 @@ if __name__ == "__main__":
 			"set-inactive",
 			"set-archived",
 			"add-tags",
+			"add-description",
 			"remove-tags",
 			"list-orgs",
 			"list-tags",
@@ -40,6 +41,11 @@ if __name__ == "__main__":
 		nargs="*",
 		default=[],
 		help="one or more tags",
+	)
+	parser.add_argument(
+		"-d",
+		"--description",
+		help="text description for the project",
 	)
 	parser.add_argument(
 		"-s",
@@ -101,9 +107,21 @@ if __name__ == "__main__":
 		project.backup(exclude=args.exclude)
 
 	elif o == "list":
+
+		check = "\u2713"
+		table_rows = [
+			["NAME", "LOCAL?", "TAGS", "DESCRIPTION"]
+		]
 		projects = registry.get_projects(tags=args.tags, status=args.status, local=args.local, org=args.org)
 		for i in projects:
-			print(i.name, i.is_local, i.tags)
+			table_rows.append([
+				i.name,
+				check if i.is_local else "x",
+				",".join(i.tags),
+				i.description if i.description else "",
+			])
+
+		print_table(table_rows)
 		print(f"---\ncount: {len(projects)}")
 
 	elif o == "list-orgs":
@@ -145,6 +163,9 @@ if __name__ == "__main__":
 	elif o == "remove-tags":
 		project.remove_tags(args.tags)
 		print(f"tags: {project.tags}")
+
+	elif o == "add-description":
+		project.add_description(args.description)
 
 	else:
 		print("unsupported operation in new rewrite")

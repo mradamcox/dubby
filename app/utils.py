@@ -14,6 +14,16 @@ def confirm_continue(msg, default=True):
         else:
             return False
 
+def print_table(table):
+    """ From https://stackoverflow.com/a/52247284 """
+    longest_cols = [
+        (max([len(str(row[i])) for row in table]) + 2)
+        for i in range(len(table[0]))
+    ]
+    row_format = "".join(["{:<" + str(longest_col) + "}" for longest_col in longest_cols])
+    for row in table:
+        print(row_format.format(*row))
+
 class GlobalConfigs():
 
     def __init__(self):

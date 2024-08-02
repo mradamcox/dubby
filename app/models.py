@@ -62,6 +62,7 @@ class Project():
         self.status = data.get('status')
         self.org = data.get('org')
         self.tags = data.get('tags')
+        self.description = data.get('description')
 
         # set calculated properties that are install-specific
         self.local_path = Path(GLOBAL.paths['projects-local'], self.name)
@@ -218,6 +219,11 @@ class Project():
 
         self.tags = [i for i in self.tags if i not in tags]
         self.save_manifest()
+
+    def add_description(self, description):
+
+        self.description = description
+        self.save_manifest()
     
     def serialize(self):
 
@@ -266,7 +272,8 @@ class Project():
         data = {
             "org": self.client,
             "status": self.status,
-            "tags": sorted(self.tags)
+            "tags": sorted(self.tags),
+            "description": self.description,
         }
 
         man_path = Path(manifest_dir, self.name+".json")
