@@ -17,14 +17,17 @@ if __name__ == "__main__":
 			"list",
 			"info",
 			"sync-aliases",
+			"sync-symlinks",
 			"create",
+			"add",
 			"delete",
 			"backup",
 			"set-active",
 			"set-inactive",
 			"set-archived",
+			"set-description",
+			"set-tagline",
 			"add-tags",
-			"add-description",
 			"remove-tags",
 			"list-orgs",
 			"list-tags",
@@ -43,9 +46,9 @@ if __name__ == "__main__":
 		help="one or more tags",
 	)
 	parser.add_argument(
-		"-d",
-		"--description",
-		help="text description for the project",
+		"-m",
+		"--message",
+		help="message used for tagline or description input",
 	)
 	parser.add_argument(
 		"-s",
@@ -83,6 +86,9 @@ if __name__ == "__main__":
 
 	print(25*'-')
 
+	## because most operations are undertaken on a project, just find it now and use
+	## it later.
+	project = None
 	if args.name and o != "create":
 		project = registry.get_project(args.name)
 		if project is None:
@@ -99,6 +105,14 @@ if __name__ == "__main__":
 
 		project = registry.create_project(args.name, tags=args.tags)
 
+	if o == "add":
+		project = registry.get_project(args.name)
+		if not project:
+			print("no project with this name exists! Use 'create' to make a new project from scratch.")
+			exit()
+
+		project.initialize_local()
+
 	elif o == "delete":
 		if confirm_continue(f"Deleting project {args.name}. Continue?"):
 			registry.delete_project(args.name)
@@ -110,7 +124,7 @@ if __name__ == "__main__":
 
 		check = "\u2713"
 		table_rows = [
-			["NAME", "LOCAL?", "TAGS", "DESCRIPTION"]
+			["NAME", "LOCAL?", "TAGS", "TAGLINE"]
 		]
 		projects = registry.get_projects(tags=args.tags, status=args.status, local=args.local, org=args.org)
 		for i in projects:
@@ -118,7 +132,7 @@ if __name__ == "__main__":
 				i.name,
 				check if i.is_local else "x",
 				",".join(i.tags),
-				i.description if i.description else "",
+				i.tagline if i.tagline else "",
 			])
 
 		print_table(table_rows)
@@ -147,6 +161,18 @@ if __name__ == "__main__":
 	elif o == "sync-aliases":
 		registry.sync_aliases()
 
+	elif o == "sync-symlinks":
+
+		if project:
+			if project.is_local:
+				project.sync_symlinks()
+			else:
+				print("[WARNING] This project doesn't exist locally.")
+		else:
+			for p in registry.get_projects(org=args.org, local=True):
+				print(p.name)
+				p.sync_symlinks()
+
 	elif o == "set-active":
 		project.set_status("active")
 
@@ -154,7 +180,7 @@ if __name__ == "__main__":
 		project.set_status("inactive")
 
 	elif o == "set-archived":
-		project.set_status("archive")
+		project.set_status("archived")
 
 	elif o == "add-tags":
 		project.add_tags(args.tags)
@@ -164,8 +190,11 @@ if __name__ == "__main__":
 		project.remove_tags(args.tags)
 		print(f"tags: {project.tags}")
 
-	elif o == "add-description":
-		project.add_description(args.description)
+	elif o == "set-description":
+		project.set_description(args.message)
+
+	elif o == "set-tagline":
+		project.set_tagline(args.message)
 
 	else:
-		print("unsupported operation in new rewrite")
+		print("[ERROR] unsupported operation")

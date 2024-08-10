@@ -62,11 +62,29 @@ class Project():
         self.status = data.get('status')
         self.org = data.get('org')
         self.tags = data.get('tags')
+        self.tagline = data.get('tagline')
         self.description = data.get('description')
 
         # set calculated properties that are install-specific
         self.local_path = Path(GLOBAL.paths['projects-local'], self.name)
         self.is_local = self.local_path.is_dir()
+
+        return self
+    
+    def initialize_local(self) -> Project:
+
+        self.local_path.mkdir(exist_ok=True)
+        print(f"project directory: {self.local_path}")
+        
+        self.sync_logseq_notes()
+        print(f"new logseq page created: projects___{self.name}.md")
+        print(f"  symlinked to: {self.local_path}/Notes/main.md")
+
+        self.create_workon_script()
+        print(".workon startup script created")
+
+        self.sync_symlinks()
+        print("all symlinks created")
 
         return self
 
@@ -149,9 +167,17 @@ class Project():
                 f.write('xdg-open $PROJECT_DIR\n')
                 f.write('cd $PROJECT_DIR\n')
 
+    def sync_symlinks(self, links: str="all", remove: bool=False):
+
+        if links in ["all", "status"]:
+            self.set_status_symlink(remove=remove)
+
+        if links in ["all", "dropbox"]:
+            self.set_dropbox_symlink(remove=remove)
+
     def set_dropbox_symlink(self, remove=False):
 
-        dbox_projects = Path(GLOBAL.paths['dropbox-projects'])
+        dbox_projects = Path(GLOBAL.paths['projects-dropbox'])
         dbox_projects.mkdir(exist_ok=True)
 
         d_proj = Path(dbox_projects, self.name)
@@ -160,7 +186,7 @@ class Project():
                 shutil.rmtree(d_proj)
         else:
             d_proj.mkdir(exist_ok=True)
-            d_link = Path(self.path, 'Dropbox')
+            d_link = Path(self.local_path, 'Dropbox')
             if d_link.is_symlink():
                 d_link.unlink()
             d_link.symlink_to(d_proj)
@@ -173,7 +199,7 @@ class Project():
         dbox_project_notes_dir = Path(dbox_notes_path, self.name)
         dbox_project_notes_dir.mkdir(exist_ok=True)
 
-        local_project_notes = Path(self.path, "Notes")
+        local_project_notes = Path(self.local_path, "Notes")
         for md_file in local_project_notes.glob("*.md"):
             shutil.copy(md_file, Path(dbox_project_notes_dir, md_file.name))
         assets_dir = Path(local_project_notes, "assets")
@@ -205,6 +231,10 @@ class Project():
 
     def set_status(self, status):
 
+        if status not in ["active", "inactive", "archived"]:
+            print(f"[WARNING] Invalid status: {status} -- no change made")
+            return
+
         self.status = status
         self.save_manifest()
         self.set_status_symlink()
@@ -220,21 +250,24 @@ class Project():
         self.tags = [i for i in self.tags if i not in tags]
         self.save_manifest()
 
-    def add_description(self, description):
+    def set_description(self, description: str):
 
         self.description = description
+        self.save_manifest()
+
+    def set_tagline(self, tagline: str):
+
+        self.tagline = tagline
         self.save_manifest()
     
     def serialize(self):
 
         return {
-            "name": self.name,
-            "path": str(self.path),
+            "org": self.client,
             "status": self.status,
-            "legion": self.legion,
-            "client": self.client,
-            "arches": self.arches,
-            "tags": self.tags,
+            "tags": sorted(self.tags),
+            "description": self.description,
+            "tagline": self.tagline,
         }
     
     def backup(self, exclude: "list[str]"=[]):
@@ -269,12 +302,7 @@ class Project():
 
         manifest_dir = Path(GLOBAL.paths['registry-dir'])
         manifest_dir.mkdir(parents=True, exist_ok=True)
-        data = {
-            "org": self.client,
-            "status": self.status,
-            "tags": sorted(self.tags),
-            "description": self.description,
-        }
+        data = self.serialize()
 
         man_path = Path(manifest_dir, self.name+".json")
         with open(man_path, "w") as o:
@@ -343,18 +371,17 @@ class Registry():
         project = Project().load_from_kwargs(**entry)
         project.save_manifest()
 
-        project.local_path.mkdir(exist_ok=True)
-        print(f"project directory: {project.local_path}")
+        project.initialize_local()
 
-        project.sync_logseq_notes()
-        print(f"new logseq page created: projects___{name}.md")
-        print(f"  symlinked to: {project.local_path}/Notes/main.md")
+        # project.sync_logseq_notes()
+        # print(f"new logseq page created: projects___{name}.md")
+        # print(f"  symlinked to: {project.local_path}/Notes/main.md")
 
-        project.create_workon_script()
-        print(".workon startup script created")
+        # project.create_workon_script()
+        # print(".workon startup script created")
 
-        self.sync_symlinks(name=name)
-        print("all symlinks created")
+        # self.sync_symlinks(name=name)
+        # print("all symlinks created")
  
         self.sync_aliases()
         return project
@@ -422,24 +449,3 @@ class Registry():
             op.writelines(aliases)
 
         print("bash aliases updated. run:\n  source ~/.bashrc")
-
-    def sync_symlinks(self, links="all", name=None, remove=False, client=None):
-
-        for p in self.get_projects():
-
-            if client and not p.client == client:
-                continue
-            if name and not p.name == name:
-                continue
-
-            if links in ["all", "status"]:
-                try:
-                    p.set_status_symlink(remove=remove)
-                except Exception as e:
-                    print(e)
-
-            if links in ["all", "dropbox"]:
-                try:
-                    p.set_dropbox_symlink(remove=remove)
-                except Exception as e:
-                    print(e)
