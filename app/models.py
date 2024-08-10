@@ -166,11 +166,14 @@ class Project:
                 f.write("cd $PROJECT_DIR\n")
 
     def sync_symlinks(self, links: str = "all", remove: bool = False):
-        if links in ["all", "status"]:
-            self.set_status_symlink(remove=remove)
 
-        if links in ["all", "dropbox"]:
-            self.set_dropbox_symlink(remove=remove)
+        if self.is_local:
+
+            if links in ["all", "status"]:
+                self.set_status_symlink(remove=remove)
+
+            if links in ["all", "dropbox"]:
+                self.set_dropbox_symlink(remove=remove)
 
     def set_dropbox_symlink(self, remove=False):
         dbox_projects = Path(GLOBAL.paths["projects-dropbox"])
@@ -364,16 +367,6 @@ class Registry:
 
         project.initialize_local()
 
-        # project.sync_logseq_notes()
-        # print(f"new logseq page created: projects___{name}.md")
-        # print(f"  symlinked to: {project.local_path}/Notes/main.md")
-
-        # project.create_workon_script()
-        # print(".workon startup script created")
-
-        # self.sync_symlinks(name=name)
-        # print("all symlinks created")
-
         self.sync_aliases()
         return project
 
@@ -409,7 +402,7 @@ class Registry:
                     shutil.rmtree(project.local_path)
                 else:
                     print("directory retained (deal with this ASAP)")
-            self.sync_symlinks(name=name, remove=True)
+            project.sync_symlinks(remove=True)
             if confirm_continue(
                 "Delete project manifest? This will completely remove the project from the registry, though local directories may exist on other systems."
             ):
