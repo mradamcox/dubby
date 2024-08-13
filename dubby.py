@@ -61,6 +61,12 @@ if __name__ == "__main__":
         default=False,
     )
     parser.add_argument(
+        "--no-tagline",
+        action="store_true",
+        default=False,
+        help="when listing projects, only those without taglines",
+    )
+    parser.add_argument(
         "--verbose",
         action="store_true",
         default=False,
@@ -124,6 +130,8 @@ if __name__ == "__main__":
         projects = registry.get_projects(
             tags=args.tags, status=args.status, local=args.local, org=args.org
         )
+        if args.no_tagline:
+            projects = [i for i in projects if not i.tagline]
         for i in projects:
             table_rows.append(
                 [
