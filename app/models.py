@@ -5,6 +5,7 @@ import shutil
 from datetime import date
 from pathlib import Path
 import subprocess
+from typing import Literal
 
 from .utils import GlobalConfigs, confirm_continue
 
@@ -12,64 +13,29 @@ GLOBAL = GlobalConfigs()
 
 
 class Project:
-    def __init__(self, **kwargs):
-        self.name: str = kwargs.get("name", "")
-        self.path: Path = Path(kwargs.get("path", ""))
-        self.status: str | None = kwargs.get("status")
-        self.arches: bool = kwargs.get("arches", False)
-        self.legion: bool = kwargs.get("legion", False)
-        self.client: str | None = kwargs.get("client")
-        self.org: str | None = kwargs.get("org")
 
-        self.local_path: Path = Path(GLOBAL.paths["projects-local"], self.name)
-        self.is_local: bool = self.local_path.is_dir()
-
-        self.tags: list = kwargs.get("tags", [])
-        if self.legion and "legiongis" not in self.tags:
-            self.tags.append("legiongis")
-        if self.arches and "arches" not in self.tags:
-            self.tags.append("arches")
-
-    def load_from_kwargs(self, **kwargs) -> Project:
-        self.name = kwargs.get("name", "")
-        self.path = Path(kwargs.get("path", ""))
-        self.status = kwargs.get("status")
-        self.arches = kwargs.get("arches")
-        self.legion = kwargs.get("legion")
-        self.client = kwargs.get("client")
-        self.org = kwargs.get("org")
+    def __init__(
+        self,
+        name: str,
+        status: Literal["active", "inactive", "archived"] = "active",
+        org: str = None,
+        tags: list = [],
+        tagline: str = None,
+        description: str = None,
+    ):
+        self.name = name
+        self.status = status
+        self.org = org
+        self.tags = tags
+        self.tagline = tagline
+        self.description = description
 
         self.local_path = Path(GLOBAL.paths["projects-local"], self.name)
         self.is_local = self.local_path.is_dir()
-
-        self.tags = kwargs.get("tags", [])
-        if self.legion and "legiongis" not in self.tags:
-            self.tags.append("legiongis")
-        if self.arches and "arches" not in self.tags:
-            self.tags.append("arches")
-
-        return self
-
-    def load_from_manifest(self, manifest_path) -> Project:
-        with open(manifest_path, "r") as o:
-            data = json.load(o)
-
-        # load stored properties that are globally set for this project
-        self.name = manifest_path.stem
-        self.status = data.get("status")
-        self.org = data.get("org")
-        self.tags = data.get("tags")
-        self.tagline = data.get("tagline")
-        self.description = data.get("description")
-
-        # set calculated properties that are install-specific
-        self.local_path = Path(GLOBAL.paths["projects-local"], self.name)
-        self.is_local = self.local_path.is_dir()
-
-        return self
 
     def initialize_local(self) -> Project:
         self.local_path.mkdir(exist_ok=True)
+        self.is_local = True
         print(f"project directory: {self.local_path}")
 
         self.sync_logseq_notes()
@@ -256,7 +222,7 @@ class Project:
 
     def serialize(self):
         return {
-            "org": self.client,
+            "org": self.org,
             "status": self.status,
             "tags": sorted(self.tags),
             "description": self.description,
@@ -301,15 +267,20 @@ class Project:
 
 
 class Registry:
-    def __init__(self):
-        pass
+
+    def load_project_from_manifest(self, manifest_path: Path) -> Project:
+        if manifest_path.is_file():
+            with open(manifest_path, "r") as o:
+                data = json.load(o)
+            data['name'] = manifest_path.stem
+            project = Project(**data)
+            return project
+        else:
+            return None
 
     def get_project(self, name) -> Project:
         manifest_path = Path(GLOBAL.paths["registry-dir"], name + ".json")
-        if manifest_path.is_file():
-            return Project().load_from_manifest(manifest_path)
-        else:
-            return None
+        return self.load_project_from_manifest(manifest_path)
 
     def get_projects(
         self,
@@ -322,7 +293,7 @@ class Registry:
         projects: list[Project] = []
 
         for mp in sorted(manifest_paths, key=lambda path: path.stem.lower()):
-            project = Project().load_from_manifest(mp)
+            project = self.load_project_from_manifest(mp)
             projects.append(project)
 
         if tags:
@@ -351,7 +322,6 @@ class Registry:
 
         entry = {
             "name": name,
-            "client": org,  # holdover, will be removed!
             "org": org,
             "status": status,
             "tags": tags,
@@ -362,7 +332,7 @@ class Registry:
 
         input("\nlooks good? hit enter to continue, or ctrl+c to abort")
 
-        project = Project().load_from_kwargs(**entry)
+        project = Project(**entry)
         project.save_manifest()
 
         project.initialize_local()
