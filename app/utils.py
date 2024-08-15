@@ -30,10 +30,19 @@ def print_table(table):
 
 class GlobalConfigs:
     def __init__(self):
+
         configs_path = Path(Path(__file__).parent.parent, "configs.json")
         with open(configs_path, "r") as o:
-            data = json.load(o)
-        self.paths = {i: Path(data["paths"][i]).expanduser() for i in data["paths"]}
+            configs = json.load(o)
+        configs_local_path = Path(Path(__file__).parent.parent, "configs.local.json")
+        if configs_local_path.is_file():
+            with open(configs_local_path, "r") as o:
+                configs_local = json.load(o)
+            configs['paths'].update(configs_local['paths'])
+
+        self.paths = {i: Path(configs["paths"][i]).expanduser() for i in configs["paths"]}
+
+        ## set some more paths that are derived from base configs
         self.paths["registry-dir"] = Path(self.paths["projects-dropbox"], ".registry")
         self.paths["archive-dir"] = Path(self.paths["projects-dropbox"], ".archive")
         self.paths["aliases_file"] = Path(Path(__file__).parent.parent, ".bash_aliases")
