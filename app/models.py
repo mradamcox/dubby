@@ -146,9 +146,14 @@ class Project:
         dbox_projects.mkdir(exist_ok=True)
 
         d_proj = Path(dbox_projects, self.name)
+
+        ## TODO: this removal should be placed in a separate function
         if remove is True:
             if confirm_continue("Delete the folder in dropbox?"):
-                shutil.rmtree(d_proj)
+                try:
+                    shutil.rmtree(d_proj)
+                except Exception as e:
+                    print(f"[ERROR] {e}")
         else:
             d_proj.mkdir(exist_ok=True)
             d_link = Path(self.local_path, "Dropbox")
@@ -343,10 +348,7 @@ class Registry:
     def delete_project(self, name):
         project = self.get_project(name)
 
-        if project is None:
-            print("no matching project to delete.")
-
-        else:
+        if project:
             note_paths = [
                 i
                 for i in Path(GLOBAL.paths["logseq-notes"], "pages").glob(
@@ -366,7 +368,7 @@ class Registry:
                         if n.is_file():
                             os.remove(n)
                 else:
-                    print("note files retained (deal with these ASAP)")
+                    print("note files retained.")
             if Path(project.local_path).is_dir():
                 if confirm_continue("Delete local project directory?"):
                     shutil.rmtree(project.local_path)
@@ -377,6 +379,8 @@ class Registry:
                 "Delete project manifest? This will completely remove the project from the registry, though local directories may exist on other systems."
             ):
                 os.remove(Path(GLOBAL.paths["registry-dir"], name + ".json"))
+        else:
+            print("no matching project to delete.")
 
     def sync_aliases(self):
         alias_file_path = GLOBAL.paths["aliases_file"]

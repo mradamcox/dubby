@@ -107,7 +107,7 @@ if __name__ == "__main__":
 
         project = registry.create_project(args.name, tags=args.tags)
 
-    if o == "add":
+    elif o == "add":
         project = registry.get_project(args.name)
         if not project:
             print(
