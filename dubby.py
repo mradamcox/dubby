@@ -116,6 +116,7 @@ if __name__ == "__main__":
             exit()
 
         project.initialize_local()
+        registry.sync_symlinks()
 
     elif o == "delete":
         if confirm_continue(f"Deleting project {args.name}. Continue?"):
