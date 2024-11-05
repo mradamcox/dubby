@@ -43,9 +43,13 @@ if __name__ == "__main__":
         help="one or more tags",
     )
     parser.add_argument(
-        "-m",
-        "--message",
-        help="message used for tagline or description input",
+        "-d",
+        "--description",
+        help="description of project, used during create --no-input or set-description",
+    )
+    parser.add_argument(
+        "--tagline",
+        help="tagline for project, used during create --no-input or set-tagline",
     )
     parser.add_argument(
         "-s",
@@ -77,6 +81,11 @@ if __name__ == "__main__":
         default=[],
         help="directory or file names to exclude during backup",
     )
+    parser.add_argument(
+        "--no-input",
+        action="store_true",
+        help="use cli arguments to create a project, don't use interactive input",
+    )
     args = parser.parse_args()
 
     registry = Registry()
@@ -105,7 +114,47 @@ if __name__ == "__main__":
             print(project.serialize())
             exit()
 
-        project = registry.create_project(args.name, tags=args.tags)
+        if args.no_input:
+            project = registry.create_project(
+                args.name,
+                description=args.description,
+                tags=args.tags,
+                tagline=args.tagline,
+            )
+        else:            
+            tagline = None
+            while not tagline:
+                tagline = input("tagline (required): ")
+            
+            description = input("description (optional): ")
+            if not description:
+                description = None
+
+            print("existing tags on other projects:")
+            print(registry.get_all_tags())
+            input_tags = input("tags for this project (multiple ok, separate with commas): ")
+            clean_tags = [i.lstrip().rstrip() for i in input_tags.split(",")]
+
+            props = {
+                "tags": clean_tags,
+                "tagline": tagline,
+                "description": description,
+            }
+
+            print("SUMMARY:")
+            print(f"new project: {args.name}")
+            org = None
+            if "__" in args.name:
+                org = args.name.split("__")[0]
+            if org:
+                print(f"  -- org: {org}")
+            else:
+                print("  (no organization)")
+            print(json.dumps(props, indent=1))
+
+            input("\nlooks good? hit enter to continue, or ctrl+c to abort")
+            
+            project = registry.create_project(args.name, **props)
 
     elif o == "add":
         project = registry.get_project(args.name)
@@ -202,10 +251,10 @@ if __name__ == "__main__":
         print(f"tags: {project.tags}")
 
     elif o == "set-description":
-        project.set_description(args.message)
+        project.set_description(args.description)
 
     elif o == "set-tagline":
-        project.set_tagline(args.message)
+        project.set_tagline(args.tagline)
 
     else:
         print("[ERROR] unsupported operation")

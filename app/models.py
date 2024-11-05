@@ -227,8 +227,8 @@ class Project:
 
     def serialize(self):
         return {
-            "org": self.org,
             "status": self.status,
+            "org": self.org,
             "tags": sorted(self.tags),
             "description": self.description,
             "tagline": self.tagline,
@@ -273,7 +273,8 @@ class Project:
 
 class Registry:
 
-    def load_project_from_manifest(self, manifest_path: Path) -> Project:
+    def get_project(self, name) -> Project:
+        manifest_path = Path(GLOBAL.paths["registry-dir"], name + ".json")
         if manifest_path.is_file():
             with open(manifest_path, "r") as o:
                 data = json.load(o)
@@ -282,10 +283,6 @@ class Registry:
             return project
         else:
             return None
-
-    def get_project(self, name) -> Project:
-        manifest_path = Path(GLOBAL.paths["registry-dir"], name + ".json")
-        return self.load_project_from_manifest(manifest_path)
 
     def get_projects(
         self,
@@ -298,7 +295,7 @@ class Registry:
         projects: list[Project] = []
 
         for mp in sorted(manifest_paths, key=lambda path: path.stem.lower()):
-            project = self.load_project_from_manifest(mp)
+            project = self.get_project(mp.stem)
             projects.append(project)
 
         if tags:
@@ -312,7 +309,7 @@ class Registry:
 
         return projects
 
-    def create_project(self, name: str, status="active", tags=[]):
+    def create_project(self, name: str, status="active", tags: list[str]=[], tagline: str=None, description: str=None):
         """Creates a new project in the registry and then sets up a local
         dirctory for it with all the bells and whistles in it. This is different
         from add_project in that the the project must not yet exist."""
@@ -330,12 +327,9 @@ class Registry:
             "org": org,
             "status": status,
             "tags": tags,
+            "tagline": tagline,
+            "description": description
         }
-
-        print("registry entry:")
-        print(json.dumps(entry, indent=1))
-
-        input("\nlooks good? hit enter to continue, or ctrl+c to abort")
 
         project = Project(**entry)
         project.save_manifest()
@@ -350,8 +344,7 @@ class Registry:
 
         if project:
             note_paths = [
-                i
-                for i in Path(GLOBAL.paths["logseq-notes"], "pages").glob(
+                i for i in Path(GLOBAL.paths["logseq-notes"], "pages").glob(
                     f"projects___{name}___*.md"
                 )
             ]
@@ -413,3 +406,12 @@ class Registry:
             op.writelines(aliases)
 
         print("bash aliases updated. run:\n  source ~/.bashrc")
+
+    def get_all_tags(self) -> list[str]:
+
+        all_tags = set()
+        for project in self.get_projects():
+            for tag in project.tags:
+                all_tags.add(tag)
+
+        return sorted(list(all_tags))
