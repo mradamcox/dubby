@@ -153,7 +153,7 @@ if __name__ == "__main__":
             print(json.dumps(props, indent=1))
 
             input("\nlooks good? hit enter to continue, or ctrl+c to abort")
-            
+
             project = registry.create_project(args.name, **props)
 
     elif o == "add":
@@ -165,7 +165,8 @@ if __name__ == "__main__":
             exit()
 
         project.initialize_local()
-        registry.sync_symlinks()
+        project.sync_symlinks()
+        registry.sync_aliases()
 
     elif o == "delete":
         if confirm_continue(f"Deleting project {args.name}. Continue?"):
