@@ -1,0 +1,19 @@
+# Usage: ansible-playbook playbooks/apt-update-upgrade.yml -kK -e host=<host-name-in-ssh> -e reboot_delay=<optional-minutes-for-delayed-reboot>
+# Example: ansible-playbook playbooks/apt-update-upgrade.yml -kK -e host=my-host -e reboot_delay=720
+- name: Basic maintenence
+  hosts: "{{ host }}"
+  become: true
+  tasks:
+    - name: Run apt update
+      ansible.builtin.apt:
+        upgrade: true
+        update_cache: true
+        autoremove: true
+    - name: Print free disk space
+      ansible.builtin.command: df -h
+      register: diskfree
+    - debug: var=diskfree.stdout_lines
+    - name: Conditionally reboot
+      when: reboot_delay is defined
+      ansible.builtin.shell:
+        cmd: "shutdown -r +{{reboot_delay}} 'maintenance reboot'"
