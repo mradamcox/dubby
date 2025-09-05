@@ -15,6 +15,7 @@ if __name__ == "__main__":
             "info",
             "sync-aliases",
             "sync-symlinks",
+            "sync-notes",
             "create",
             "delete",
             "add",
@@ -233,6 +234,17 @@ if __name__ == "__main__":
             for p in registry.get_projects(org=args.org, local=True):
                 print(p.name)
                 p.sync_symlinks()
+
+    elif o == "sync-notes":
+        if project:
+            if project.is_local:
+                project.sync_logseq_notes()
+            else:
+                print("[WARNING] This project doesn't exist locally.")
+        else:
+            for p in registry.get_projects(org=args.org, local=True):
+                print(p.name)
+                p.sync_logseq_notes()
 
     elif o == "set-active":
         project.set_status("active")
