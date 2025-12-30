@@ -1,6 +1,7 @@
 #! /usr/bin/python3
 
 import json
+import shutil
 import argparse
 
 from app.models import Registry
@@ -17,8 +18,8 @@ if __name__ == "__main__":
             "sync-symlinks",
             "sync-notes",
             "create",
-            "delete",
             "add",
+            "remove",
             "backup",
             "set-active",
             "set-inactive",
@@ -86,6 +87,10 @@ if __name__ == "__main__":
         "--no-input",
         action="store_true",
         help="use cli arguments to create a project, don't use interactive input",
+    )
+    parser.add_argument(
+        "--target",
+        help="path to external Projects directory to send archive to"
     )
     args = parser.parse_args()
 
@@ -169,16 +174,26 @@ if __name__ == "__main__":
         project.sync_symlinks()
         registry.sync_aliases()
 
-    elif o == "delete":
-        if confirm_continue(f"Deleting project {args.name}. Continue?"):
+    elif o == "remove":
+        if confirm_continue(f"Beginning removal of {args.name}. Continue?"):
             registry.delete_project(args.name)
 
     elif o == "backup":
-        project.backup(exclude=args.exclude)
+        if not project.is_local:
+            print("This project does not exist locally and can't be backed up.")
+            exit()
+        archive_path = project.backup(target=args.target, exclude=args.exclude)
+        print(f"archive created: {archive_path}")
+
+        if confirm_continue("Do you also want to remove the local project directory?", default=False):
+            print(f"deleting directory: {project.local_path}")
+            shutil.rmtree(project.local_path)
+            if confirm_continue("Set status to archived?", default=False):
+                project.set_status("archived")
 
     elif o == "list":
         check = "\u2713"
-        table_rows = [["NAME", "LOCAL?", "TAGS", "TAGLINE"]]
+        table_rows = [["NAME", "LOCAL?", "TAGLINE"]]
         projects = registry.get_projects(
             tags=args.tags, status=args.status, local=args.local, org=args.org
         )
@@ -189,7 +204,6 @@ if __name__ == "__main__":
                 [
                     i.name,
                     check if i.is_local else "x",
-                    ",".join(i.tags),
                     i.tagline if i.tagline else "",
                 ]
             )

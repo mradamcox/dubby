@@ -234,12 +234,13 @@ class Project:
             "tagline": self.tagline,
         }
 
-    def backup(self, exclude: "list[str]" = []):
-        archive_dir = Path(GLOBAL.paths["archive-dir"])
-        archive_dir.mkdir(parents=True, exist_ok=True)
+    def backup(self, target: Path = None, exclude: "list[str]" = []):
+
+        if not target:
+            target = GLOBAL.paths["projects-local"]
 
         archive_name = date.today().strftime(f"{self.name}___%Y-%m-%d.tar.gz")
-        archive_path = Path(archive_dir, archive_name)
+        archive_path = Path(target, archive_name)
 
         cmd = ["tar", "-C", str(self.local_path.parent)]
 
@@ -260,6 +261,8 @@ class Project:
         cmd += ["-czf", str(archive_path), self.local_path.name]
 
         subprocess.call(cmd)
+
+        return archive_path
 
     def save_manifest(self):
         manifest_dir = Path(GLOBAL.paths["registry-dir"])
