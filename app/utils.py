@@ -43,6 +43,7 @@ class GlobalConfigs:
         self.paths = {i: Path(configs["paths"][i]).expanduser() for i in configs["paths"]}
 
         ## set some more paths that are derived from base configs
-        self.paths["registry-dir"] = Path(self.paths["projects-dropbox"], ".registry")
+        self.paths["registry-dir"] = Path(self.paths["dropbox"], ".dubby", "registry")
+        self.paths["projects-dropbox"] = Path(self.paths["dropbox"], "Projects")
         self.paths["archive-dir"] = Path(self.paths["projects-dropbox"], ".archive")
         self.paths["aliases_file"] = Path(Path(__file__).parent.parent, ".bash_aliases")

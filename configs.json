@@ -1,6 +1,6 @@
 {
 	"paths": {
-		"projects-dropbox": "~/Dropbox/Projects",
+		"dropbox": "~/Dropbox",
 		"projects-local": "~/Projects",
 		"logseq-notes": "~/Notes"
 	}
