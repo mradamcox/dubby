@@ -5,13 +5,14 @@ import shutil
 import argparse
 
 from app.models import Registry
-from app.utils import confirm_continue, print_table
+from app.utils import confirm_continue, print_table, GlobalConfigs
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument(
         "operation",
         choices=[
+            "show-configs",
             "list",
             "info",
             "sync-aliases",
@@ -103,6 +104,12 @@ if __name__ == "__main__":
         print(f"project: {args.name}")
 
     print(25 * "-")
+
+    if o == "show-configs":
+        g = GlobalConfigs()
+        for k, v in g.paths.items():
+            print(k, str(v))
+        exit()
 
     ## because most operations are undertaken on a project, just find it now and use
     ## it later.
